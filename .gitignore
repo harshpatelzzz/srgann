@@ -1,0 +1,6 @@
+.venv
+new_data/
+__pycache__/
+gen.pth.tar
+disc.pth.tar
+*.pth.tar
