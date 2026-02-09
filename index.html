@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SRGAN Super Resolution</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      width: 400px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    input[type="file"] {
+      margin: 15px 0;
+      color: white;
+    }
+
+    button {
+      background: #00c6ff;
+      border: none;
+      padding: 12px 20px;
+      color: black;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #00a6d6;
+    }
+
+    img {
+      margin-top: 20px;
+      max-width: 100%;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .loading {
+      margin-top: 15px;
+      display: none;
+      font-size: 14px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SRGAN Upscaler</h1>
+
+    <input type="file" id="fileInput" accept="image/*" />
+    <br />
+    <button onclick="uploadImage()">Enhance Image</button>
+
+    <div class="loading" id="loading">Processing...</div>
+
+    <img id="resultImage" />
+  </div>
+
+  <script>
+    async function uploadImage() {
+      const fileInput = document.getElementById("fileInput");
+      const loading = document.getElementById("loading");
+      const resultImg = document.getElementById("resultImage");
+
+      if (!fileInput.files.length) {
+        alert("Please select an image first.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      loading.style.display = "block";
+      resultImg.style.display = "none";
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min max
+        const response = await fetch("/super-resolve", {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const text = await response.text();
+          let msg = "Server error";
+          try {
+            const j = JSON.parse(text);
+            if (j.detail) msg = j.detail;
+          } catch (_) {}
+          throw new Error(msg);
+        }
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+
+        resultImg.src = imageUrl;
+        resultImg.style.display = "block";
+      } catch (err) {
+        alert(err.name === "AbortError" ? "Request timed out. Try a smaller image." : (err.message || "Failed to process image."));
+        console.error(err);
+      } finally {
+        loading.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
