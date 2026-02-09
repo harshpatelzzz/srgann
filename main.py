@@ -1,4 +1,5 @@
 
+import asyncio
 import base64
 import io
 import time
@@ -43,7 +44,7 @@ print("SRGAN model loaded.")
 # Helper functions
 # -------------------------
 # Max low-res side length so inference finishes in reasonable time (4x upscale)
-MAX_LR_SIDE = 256
+MAX_LR_SIDE = 128
 
 
 def preprocess(image: Image.Image):
@@ -80,13 +81,17 @@ async def enhance(
     outscale: int = Query(4, ge=1, le=4, description="Upscale factor"),
 ):
     """POST /enhance?outscale=4. Form: image=<file>. Returns JSON: output_image (base64), scale, time."""
-    t0 = time.perf_counter()
     image_bytes = await image.read()
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     lr = preprocess(img)
-    with torch.no_grad():
-        sr = gen(lr)
-    sr_img = postprocess(sr)
+
+    def run_inference():
+        with torch.no_grad():
+            sr = gen(lr)
+        return postprocess(sr)
+
+    t0 = time.perf_counter()
+    sr_img = await asyncio.to_thread(run_inference)
     elapsed = time.perf_counter() - t0
     buf = io.BytesIO()
     sr_img.save(buf, format="PNG")

@@ -2,8 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const STEPS = [
   { id: 'upload', label: 'Uploading image' },
-  { id: 'process', label: 'Processing image' },
-  { id: 'output', label: 'Preparing output' },
+  { id: 'process', label: 'Running model…' },
+  { id: 'output', label: 'Preparing output (30–60 s on CPU)' },
 ]
 
 export type ProcessingStepsProps = {
